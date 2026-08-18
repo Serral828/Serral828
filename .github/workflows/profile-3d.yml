@@ -1,0 +1,33 @@
+name: GitHub Profile 3D Contrib
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 18 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    name: Generate GitHub profile 3D contribution images
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: yoshi389111/github-profile-3d-contrib@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          USERNAME: ${{ github.repository_owner }}
+
+      - name: Commit and push generated images
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A profile-3d-contrib
+          if git diff --cached --quiet; then
+            echo "No profile image changes"
+          else
+            git commit -m "chore: update 3D profile contribution images"
+            git push
+          fi
