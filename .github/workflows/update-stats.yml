@@ -1,0 +1,46 @@
+name: Update GitHub profile stats
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 1 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      PROFILE_USERNAME: Serral828
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Fetch public GitHub contribution data
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data assets
+          gh api graphql \
+            -F login="$PROFILE_USERNAME" \
+            -f query='query($login:String!) { user(login:$login) { contributionsCollection { totalCommitContributions totalIssueContributions totalPullRequestContributions totalPullRequestReviewContributions contributionCalendar { totalContributions weeks { contributionDays { contributionCount date } } } } repositories(first:100, ownerAffiliations:OWNER, isFork:false) { totalCount nodes { stargazerCount forkCount } } } }' \
+            > data/github-stats.json
+
+      - name: Render profile graphic
+        run: node scripts/generate-stats-svg.mjs data/github-stats.json assets/github-stats.svg
+
+      - name: Commit updated graphic
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/github-stats.svg data/github-stats.json
+          if git diff --cached --quiet; then
+            echo "No profile changes"
+          else
+            git commit -m "chore: update profile stats"
+            git push
+          fi
